@@ -4,6 +4,8 @@ import github from '../services/github';
 
 import parseStringAsArray from '../utils/parseStringAsArray';
 
+import { findConnections, sendMessage } from '../websocket';
+
 class DevController {
   async index(request, response) {
     const devs = await Dev.find();
@@ -30,13 +32,26 @@ class DevController {
       coordinates: [longitude, latitude],
     };
 
+    const techsArray = parseStringAsArray(techs);
+
     const dev = await Dev.create({
       github_username,
-      techs: parseStringAsArray(techs),
+      techs: techsArray,
       name,
       bio,
       avatar_url,
       location,
+    });
+
+    const sendSocketMessageTo = findConnections({
+      coordinates: { latitude, longitude },
+      techs: techsArray,
+    });
+
+    sendMessage({
+      to: sendSocketMessageTo,
+      message: 'NEW_DEV',
+      data: dev,
     });
 
     return response.status(201).json(dev);
